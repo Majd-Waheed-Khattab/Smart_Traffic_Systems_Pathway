@@ -1,0 +1,12 @@
+train: /home/majd/Desktop/Computer_Vision_Midad/data/dataset/images/train
+val: /home/majd/Desktop/Computer_Vision_Midad/data/dataset/images/val
+test: /home/majd/Desktop/Computer_Vision_Midad/data/dataset/images/test
+
+nc: 6
+names:
+  - car
+  - van
+  - bus
+  - truck
+  - motorcycle
+  - motorcycle_traffic_police
