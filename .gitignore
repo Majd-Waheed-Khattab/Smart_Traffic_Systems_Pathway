@@ -1,0 +1,28 @@
+cat > .gitignore <<'EOF'
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+
+# Dataset ونتائج التدريب
+data/
+runs/
+outputs/
+
+# الفيديوهات والصور الكبيرة
+*.mp4
+*.avi
+*.mkv
+*.jpg
+*.jpeg
+*.png
+*.jfif
+*.webp
+
+# النماذج
+*.pt
+!models/
+!models/best.pt
+EOF.git_backup/
+.git_backup/
