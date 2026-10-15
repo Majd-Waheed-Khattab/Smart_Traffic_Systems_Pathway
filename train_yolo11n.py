@@ -16,6 +16,5 @@ def main():
         name="vehicle_yolo11n_final",
     )
 
-
 if __name__ == "__main__":
     main()
