@@ -4,12 +4,12 @@ __pycache__/
 .env
 .DS_Store
 
-# Dataset ونتائج التدريب
+# Dataset and training outputs
 data/
 runs/
 outputs/
 
-# الفيديوهات والصور الكبيرة
+# Large media files
 *.mp4
 *.avi
 *.mkv
@@ -19,10 +19,10 @@ outputs/
 *.jfif
 *.webp
 
-# ملفات النماذج الكبيرة
+# Model files
 *.pt
 !models/
 !models/best.pt
 
-# نسخ Git الاحتياطية
+# Backup Git directory
 .git_backup/

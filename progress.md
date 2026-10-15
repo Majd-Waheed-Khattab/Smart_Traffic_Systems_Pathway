@@ -1,28 +1,54 @@
-## Video inference and tracking
+# Project Progress
 
-- Model: `models/best.pt`
-- Input video: `data/input/training_h264.mp4`
-- Processed frames: 7500
-- Resolution: 1280x720
-- FPS: 25
-- Output video: `outputs/inference/tracked_video.mp4`
-- Statistics: `outputs/inference/statistics.json`
-- Unique tracker IDs: 1199
+## October 6, 2026
 
-### Detection instances by class
+- تم تجهيز مشروع YOLO11n.
+- تم تجهيز البيانات الأصلية.
+- تم بدء تدريب النموذج الأساسي.
+- تم تجهيز ملفات فحص البيانات والفيديو.
+- تم تحديد فئات المركبات.
 
-- Car: 49,899
-- Truck: 4,409
-- Bus: 377
-- Motorcycle: 21
-- Van: 31
+## October 15, 2026
 
-### Unique IDs by class
+- تم تجهيز النموذج النهائي `models/best.pt`.
+- تم رفع النموذج باستخدام Git LFS.
+- تم إنشاء ملف inference للفيديو.
+- تم اختبار النموذج على فيديو مروري.
+- تمت معالجة فيديو يحتوي على 7500 إطار في التشغيل الأول.
+- تم إنشاء فيديو ناتج للتتبع.
+- تم إنشاء ملف JSON للإحصاءات.
+- تمت إضافة ByteTrack لتتبع المركبات.
+- تمت إضافة IDs للمركبات.
+- تمت إضافة عدد المركبات الفريدة.
+- تمت إضافة عدد الكشف حسب الفئة.
+- تمت إضافة عدد المركبات الفريدة حسب الفئة.
+- تمت إضافة تقدير تقريبي للسرعة.
+- تمت إضافة تمييز المخالفات باللون الأحمر.
+- تمت إضافة حفظ أعلى سرعة لكل ID.
+- تم حذف ملفات الاختبار والأدوات القديمة غير الضرورية من النسخة النهائية.
+- تم الاحتفاظ بملفات التدريب وملفات inference الأساسية.
 
-- Car: 1,113
-- Truck: 150
-- Bus: 44
-- Motorcycle: 1
-- Van: 12
+## حالة المشروع الحالية
 
-Note: detection-instance counts represent appearances across frames, while unique vehicle counts represent tracker IDs.
+المشروع قابل للتشغيل باستخدام:
+
+```bash
+python inference_video.py \
+  --model models/best.pt \
+  --video data/input/training_h264.mp4
+```
+
+## ملفات النتائج
+
+```text
+outputs/inference/tracked_speed_video.mp4
+outputs/inference/speed_statistics.json
+```
+
+## ملاحظات
+
+- السرعة المحسوبة تقريبية.
+- قيمة `PIXELS_PER_METER` تحتاج إلى معايرة للحصول على سرعة أقرب إلى الواقع.
+- عدد الكشف عبر الإطارات لا يساوي عدد المركبات الفريدة.
+- يمكن أن يتغير ID إذا فقد المتتبع المركبة مؤقتًا.
+- تم استبعاد `data/` و`runs/` و`outputs/` من GitHub بسبب حجمها.
