@@ -1,4 +1,3 @@
-cat > .gitignore <<'EOF'
 .venv/
 __pycache__/
 *.pyc
@@ -20,9 +19,10 @@ outputs/
 *.jfif
 *.webp
 
-# النماذج
+# ملفات النماذج الكبيرة
 *.pt
 !models/
 !models/best.pt
-EOF.git_backup/
+
+# نسخ Git الاحتياطية
 .git_backup/
