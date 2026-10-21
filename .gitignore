@@ -22,10 +22,7 @@ outputs/
 # Model files
 *.pt
 !models/
-!models/best.pt
 !models/best_continued.pt
-!models/best_before_improvement.pt
-!models/best_improved.pt
 
 # Backup Git directory
 .git_backup/
