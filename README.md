@@ -1,5 +1,7 @@
 # Smart Traffic Systems Pathway
 
+## About
+
 مشروع لاكتشاف وتتبع المركبات باستخدام YOLO11n، مع حفظ فيديو inference وإحصاءات أساسية عن المركبات، إضافة إلى تقدير تقريبي للسرعة وتمييز المركبات المتجاوزة لحد السرعة.
 
 ## فكرة المشروع
@@ -63,25 +65,26 @@ source .venv/bin/activate
 ## ملفات المشروع الأساسية
 
 ```text
-models/best.pt
+models/best_continued.pt
 ```
 
-النموذج المدرب المستخدم في inference.
+النموذج النهائي المستخدم في inference. النموذج السابق للمقارنة محفوظ في
+`models/best.pt`.
 
 ```text
-inference_video.py
+src/inference_video.py
 ```
 
 الملف الرئيسي لتشغيل النموذج على الفيديو، وإضافة التتبع والـ IDs والسرعة والألوان والإحصاءات.
 
 ```text
-speed_logic.py
+src/speed_logic.py
 ```
 
 يحتوي على منطق تقدير السرعة اعتمادًا على حركة مركز المركبة بين الإطارات.
 
 ```text
-violation_config.py
+src/violation_config.py
 ```
 
 يحتوي على الألوان، حد السرعة، ومعامل معايرة البكسل إلى متر.
@@ -109,7 +112,7 @@ tests/test_libraries.py
 يجب أن يكون النموذج موجودًا في:
 
 ```text
-models/best.pt
+models/best_continued.pt
 ```
 
 ويجب أن يكون فيديو الاختبار موجودًا في:
@@ -121,16 +124,16 @@ data/input/training_h264.mp4
 شغّل:
 
 ```bash
-python inference_video.py \
-  --model models/best.pt \
+python src/inference_video.py \
+  --model models/best_continued.pt \
   --video data/input/training_h264.mp4
 ```
 
 يمكن تحديد مسارات أخرى:
 
 ```bash
-python inference_video.py \
-  --model models/best.pt \
+python src/inference_video.py \
+  --model models/best_continued.pt \
   --video data/input/training_h264.mp4 \
   --output-video outputs/inference/tracked_speed_video.mp4 \
   --output-stats outputs/inference/speed_statistics.json
@@ -218,6 +221,99 @@ SPEED_LIMIT_KMH = 50.0
 
 ## الاختبارات
 
+## تحسين البيانات والتدريب
+
+تم فحص 12 مجموعة بيانات داخل `data/source_datasets`، ومنها أحدث ثلاث مجموعات:
+
+- `Traffic surveillance system.v1i.yolov8`
+- `car detection 1.v1i.yolov8`
+- `traffic.v1i.yolov8`
+
+أنتج التحضير dataset موحدًا في `data/dataset` يضم 19,834 صورة و19,834
+label، موزعة إلى 15,864 train و1,987 validation و1,983 test. تم استخدام
+تقسيم deterministic مع seed ثابت، وإزالة الصور المتطابقة وإبقاء مجموعات
+الأسماء المتسلسلة داخل split واحد لتقليل تسرب إطارات الفيديو.
+
+الفئات النهائية هي الفئات الست الموجودة في `classes.txt`. التحويلات
+المستخدمة موثقة في `reports/dataset_summary.md`، وتشمل `motorbike` إلى
+`motorcycle` و`microbus` إلى `van`. الفئات غير المتوافقة مثل `person` و
+`bicycle` و`ambulance` لم تُحوّل إلى فئة مركبة بالتخمين، وسُجلت الملفات
+المتأثرة في تقرير التحضير.
+
+أدوات reproducible workflow:
+
+```bash
+python scripts/validate_datasets.py
+python scripts/prepare_dataset.py
+python train_improved_model.py
+python scripts/evaluate_models.py
+```
+
+### مواصلة تدريب النموذج الحالي
+
+تم ضبط [train_yolo11n.py](./train_yolo11n.py) ليحمّل النموذج الحالي
+`models/best.pt` ثم يواصل تدريبه على البيانات الموجودة في
+`data/dataset/data.yaml`. لا يتم استبدال النموذج الأصلي؛ إذ تحفظ نتيجة
+التدريب في:
+
+```text
+models/best_continued.pt
+```
+
+لتشغيل التدريب:
+
+```bash
+source .venv/bin/activate
+python train_yolo11n.py
+```
+
+هذا الأسلوب يبدأ تجربة تدريب جديدة بأوزان `models/best.pt` ويحفظ نموذجًا
+مستقلًا للمقارنة، وليس استكمالًا لحالة optimizer من تجربة سابقة. وللمقارنة
+في inference، شغّل نفس الفيديو مرة باستخدام كل نموذج:
+
+```bash
+python src/inference_video.py \
+  --model models/best.pt \
+  --video data/input/training_h264.mp4 \
+  --output-video outputs/inference/baseline_tracked_video.mp4 \
+  --output-stats outputs/inference/baseline_statistics.json
+
+python src/inference_video.py \
+  --model models/best_continued.pt \
+  --video data/input/training_h264.mp4 \
+  --output-video outputs/inference/continued_tracked_video.mp4 \
+  --output-stats outputs/inference/continued_statistics.json
+```
+
+التقارير:
+
+- `reports/dataset_validation_report.json` و`reports/dataset_validation_report.md`
+- `reports/dataset_summary.json` و`reports/dataset_summary.md`
+- `reports/model_comparison.json` و`reports/model_comparison.md`
+- `reports/final_model_decision.md`
+- `reports/video_comparison.md`
+
+كانت مقاييس baseline على test هي precision **0.4017** وrecall **0.3513**
+وmAP50 **0.2911** وmAP50-95 **0.1741**. أما experiment المحسّن فكانت
+0.4316 و0.3162 و0.2702 و0.1519 على الترتيب؛ لذلك بقي
+`models/best_continued.pt` هو النموذج النهائي. النموذج السابق للمقارنة هو
+`models/best.pt`، والنسخ التجريبية هي `models/best_before_improvement.pt`
+و`models/best_improved.pt`.
+
+تم التحقق من النموذجين على الفيديو نفسه. النتائج موجودة في:
+
+```text
+outputs/inference/baseline_tracked_video.mp4
+outputs/inference/improved_tracked_video.mp4
+outputs/inference/baseline_statistics.json
+outputs/inference/improved_statistics.json
+```
+
+عدادات الفيديو ليست مقياس دقة رسميًا. التتبع يستخدم ByteTrack، والـ IDs قد
+تتغير عند فقد المركبة. السرعة تقريبية وتعتمد على `PIXELS_PER_METER = 8.0`
+ومعايرة الكاميرا؛ اللون الأحمر يعني تجاوز `SPEED_LIMIT_KMH = 50.0` وفق هذا
+التقدير فقط.
+
 اختبار المكتبات:
 
 ```bash
@@ -228,9 +324,9 @@ python tests/test_libraries.py
 
 ```bash
 python -m py_compile \
-  inference_video.py \
-  speed_logic.py \
-  violation_config.py \
+  src/inference_video.py \
+  src/speed_logic.py \
+  src/violation_config.py \
   train_yolo11n.py
 ```
 
@@ -253,7 +349,7 @@ outputs/
 يتم الاحتفاظ بالنموذج النهائي فقط:
 
 ```text
-models/best.pt
+models/best_continued.pt
 ```
 
 ويتم رفعه باستخدام Git LFS.
@@ -280,3 +376,71 @@ models/best.pt
 - تقدير سرعة تقريبي.
 - تمييز للمخالفات.
 - توثيق لطريقة التشغيل والنتائج.
+
+## Documentation
+
+### كيف عالجنا المشكلة
+
+تم تحويل المشكلة إلى كشف وتصنيف للمركبات باستخدام YOLO11n، ثم استخدام
+ByteTrack للحفاظ على هوية المركبة بين الإطارات. يحفظ النظام فيديوً موضحًا
+عليه الصناديق والفئات وIDs، ويحسب إحصاءات الكشف والتتبع ويقدّر السرعة
+تقريبيًا.
+
+### البيانات ومصدرها
+
+تم دمج 12 مجموعة بيانات مرورية متاحة للمشروع في مجموعة موحدة. بعد التحقق
+وإزالة التكرارات وتقسيم البيانات، أصبحت المجموعة 19,834 صورة: 15,864
+للتدريب، و1,987 للتحقق، و1,983 للاختبار. توجد تفاصيل التحضير والتحويلات في
+`reports/dataset_summary.md` و`reports/dataset_validation_report.md`.
+
+### التدريب وتكثير البيانات
+
+بدأ التدريب من أوزان YOLO11n، ثم تمت مواصلة التدريب من `models/best.pt`.
+استُخدمت 30 epoch، وصور بحجم 416، و`patience=8` للتوقف المبكر، وكان التدريب
+على CPU. استخدمت Ultralytics عمليات augmentation الافتراضية، ومنها تغيير
+الحجم، والتحويلات اللونية، والتكبير والتصغير، والإزاحة، والقلب الأفقي،
+وMosaic.
+
+### النتائج
+
+تم تقييم النموذجين على نفس مجموعة الاختبار. حقق النموذج القديم
+`models/best.pt` قيمًا مقدارها Precision=0.402 وRecall=0.351 وmAP50=0.291
+وmAP50-95=0.174. حقق النموذج النهائي `models/best_continued.pt`
+Precision=0.769 وRecall=0.690 وmAP50=0.757 وmAP50-95=0.502.
+التفاصيل موجودة في `reports/continued_model_comparison.md`.
+
+### المشاكل والتحديات
+
+- اختلاف أسماء الفئات بين مصادر البيانات، وتم توحيدها في `classes.txt`.
+- وجود صور متقاربة من فيديو واحد، لذلك استُخدم تقسيم ثابت لتقليل تسرب
+  الإطارات بين مجموعات التدريب والاختبار.
+- التدريب على CPU أبطأ من التدريب على GPU.
+- انقطاع الكهرباء أثناء التدريب، ثم استُخدم `last.pt` لاستكمال التدريب.
+- تقدير السرعة تقريبي ويتطلب معايرة حقيقية للكاميرا والمسافات.
+
+### نقاط الضعف
+
+- السرعة المقدرة ليست قياسًا مروريًا رسميًا.
+- قد يتغير ID عند فقد المركبة لعدة إطارات.
+- قد تُحسب المركبة نفسها أكثر من مرة إذا فقدت ID ثم حصلت على ID جديد.
+- تعتمد النتائج على زاوية الكاميرا والإضاءة وجودة الفيديو.
+
+### توزيع العمل
+
+
+| عضو الفريق | المهمة |
+|---|---|
+| احمد زيتوني | تجهيز البيانات وتوحيد الفئات |
+| مجد خطاب |,  التتبع، تقدير السرعة، ودمج النظام , الاختبار والتوثيق والعرض  تدريب النموذج وتقييمه |
+
+### هيكلية المستودع
+
+```text
+src/                    # كود inference والتتبع والسرعة
+models/                 # النموذج النهائي والنماذج المرجعية
+scripts/                # تجهيز البيانات وتقييم النماذج
+tests/                  # اختبارات المكتبات
+train_yolo11n.py        # مواصلة تدريب النموذج
+requirements.txt        # متطلبات Python
+README.md               # التوثيق وطريقة التشغيل
+```

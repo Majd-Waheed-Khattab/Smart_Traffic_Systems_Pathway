@@ -2,7 +2,7 @@ from ultralytics import YOLO
 
 
 def main():
-    model = YOLO("yolo11n.pt")
+    model = YOLO("models/best.pt")
 
     model.train(
         data="data/dataset/data.yaml",
@@ -13,7 +13,7 @@ def main():
         patience=8,
         device="cpu",
         project="runs",
-        name="vehicle_yolo11n_final",
+        name="vehicle_yolo11n_continued",
     )
 
 if __name__ == "__main__":

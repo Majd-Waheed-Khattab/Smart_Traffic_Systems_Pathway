@@ -57,14 +57,15 @@ models/best.pt
 
 إعدادات التدريب الأساسية:
 
-- النموذج الابتدائي: YOLO11n.
+- النموذج الابتدائي في التدريب الأول: YOLO11n.
+- نموذج نقطة البداية للتدريب اللاحق: `models/best.pt`.
 - عدد الحلقات: 30 epochs.
 - حجم الصور: 416.
 - حجم الدفعة: يتم تحديده تلقائيًا.
 - عدد العمال: 2.
 - الصبر قبل التوقف المبكر: 8 epochs.
 - الجهاز المستخدم: CPU.
-- اسم تجربة التدريب: `vehicle_yolo11n_final`.
+- اسم تجربة التدريب اللاحق: `vehicle_yolo11n_continued`.
 
 توجد إعدادات التدريب في:
 
@@ -72,12 +73,23 @@ models/best.pt
 train_yolo11n.py
 ```
 
+يتم تحميل `models/best.pt` ومواصلة التدريب على مجموعة البيانات نفسها، مع
+حفظ النموذج الناتج بشكل مستقل في:
+
+```text
+runs/vehicle_yolo11n_continued/weights/best.pt
+```
+
+وبذلك يبقى `models/best.pt` محفوظًا للمقارنة. هذه مواصلة تدريب بأوزان
+النموذج السابق ضمن تجربة جديدة، وليست استعادة لحالة optimizer من تجربة
+سابقة.
+
 ## 6. معالجة الفيديو
 
 يتم تشغيل النموذج على فيديو مروري باستخدام:
 
 ```text
-inference_video.py
+src/inference_video.py
 ```
 
 الفيديو المستخدم للاختبار:
@@ -124,7 +136,7 @@ car ID:12 23.4 km/h
 الألوان معرفة في:
 
 ```text
-violation_config.py
+src/violation_config.py
 ```
 
 ## 9. تقدير السرعة
@@ -237,16 +249,16 @@ python tests/test_libraries.py
 
 ```bash
 python -m py_compile \
-  inference_video.py \
-  speed_logic.py \
-  violation_config.py \
+  src/inference_video.py \
+  src/speed_logic.py \
+  src/violation_config.py \
   train_yolo11n.py
 ```
 
 ### اختبار inference
 
 ```bash
-python inference_video.py \
+python src/inference_video.py \
   --model models/best.pt \
   --video data/input/training_h264.mp4
 ```
@@ -256,6 +268,43 @@ python inference_video.py \
 ```text
 outputs/inference/tracked_speed_video.mp4
 outputs/inference/speed_statistics.json
+
+## 13. تحسين البيانات والتقييم المقارن
+
+تم فحص 12 مجموعة بيانات من `data/source_datasets` باستخدام
+`scripts/validate_datasets.py`. التقرير الكامل في
+`reports/dataset_validation_report.md`، والتحضير القابل لإعادة التشغيل في
+`scripts/prepare_dataset.py`.
+
+البيانات النهائية الموحدة:
+
+| Split | Images | Labels |
+|---|---:|---:|
+| train | 15864 | 15864 |
+| val | 1987 | 1987 |
+| test | 1983 | 1983 |
+
+المجموع 19834 صورة و19834 label. تم استخدام mapping موثق للفئات، وإزالة
+التكرارات الصريحة، وتجميع الأسماء المتسلسلة في split واحد لتقليل تسرب
+الإطارات المتقاربة. الفئات غير المتوافقة لم تُحوّل تخمينيًا.
+
+تمت مقارنة `models/best_before_improvement.pt` و
+`models/best_improved.pt` على نفس test split:
+
+| Metric | Baseline | Improved |
+|---|---:|---:|
+| Precision | 0.4017 | 0.4316 |
+| Recall | 0.3513 | 0.3162 |
+| mAP50 | 0.2911 | 0.2702 |
+| mAP50-95 | 0.1741 | 0.1519 |
+
+رغم تحسن precision، تراجعت المقاييس الأهم إجمالًا، ولذلك تم الإبقاء على
+`models/best.pt`. تفاصيل المقارنة والقرار في
+`reports/model_comparison.md` و`reports/final_model_decision.md`.
+
+تم اختبار النموذجين على `data/input/training_h264.mp4` باستخدام نفس إعدادات
+التتبع، وحفظت النتائج في `reports/video_comparison.md`. هذه العدادات
+تشغيلية وليست مقياس دقة رسميًا.
 ```
 
 ## 13. الملفات النهائية
@@ -264,9 +313,9 @@ outputs/inference/speed_statistics.json
 
 ```text
 models/best.pt
-inference_video.py
-speed_logic.py
-violation_config.py
+src/inference_video.py
+src/speed_logic.py
+src/violation_config.py
 train_yolo11n.py
 requirements.txt
 classes.txt
