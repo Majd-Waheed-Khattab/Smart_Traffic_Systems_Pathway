@@ -19,10 +19,11 @@ from violation_config import (
 )
 
 
-DEFAULT_MODEL = Path("models/best.pt")
-DEFAULT_VIDEO = Path("data/input/training_h264.mp4")
-DEFAULT_OUTPUT_VIDEO = Path("outputs/inference/tracked_speed_video.mp4")
-DEFAULT_OUTPUT_STATS = Path("outputs/inference/speed_statistics.json")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MODEL = PROJECT_ROOT / "models/best_continued.pt"
+DEFAULT_VIDEO = PROJECT_ROOT / "data/input/training_h264.mp4"
+DEFAULT_OUTPUT_VIDEO = PROJECT_ROOT / "outputs/inference/training_h264_result.mp4"
+DEFAULT_OUTPUT_STATS = PROJECT_ROOT / "outputs/inference/training_h264_statistics.json"
 SPEED_HISTORY_SIZE = 8
 
 
@@ -73,12 +74,10 @@ def draw_text(
     )
 
 
-def main() -> None:
-    args = parse_args()
-
-    if not args.model.exists():
+def validate_args(args: argparse.Namespace) -> None:
+    if not args.model.is_file():
         raise FileNotFoundError(f"Model not found: {args.model}")
-    if not args.video.exists():
+    if not args.video.is_file():
         raise FileNotFoundError(f"Video not found: {args.video}")
     if not 0.0 <= args.conf <= 1.0:
         raise ValueError("--conf must be between 0 and 1")
@@ -86,6 +85,11 @@ def main() -> None:
         raise ValueError("--imgsz must be greater than zero")
     if args.vid_stride < 1:
         raise ValueError("--vid-stride must be at least 1")
+
+
+def main() -> None:
+    args = parse_args()
+    validate_args(args)
 
     args.output_video.parent.mkdir(parents=True, exist_ok=True)
     args.output_stats.parent.mkdir(parents=True, exist_ok=True)
@@ -175,11 +179,7 @@ def main() -> None:
                     if speed > SPEED_LIMIT_KMH:
                         violation_ids.add(track_id)
 
-                color = (
-                    VIOLATION_COLOR
-                    if speed > SPEED_LIMIT_KMH
-                    else NORMAL_COLOR
-                )
+                color = VIOLATION_COLOR if speed > SPEED_LIMIT_KMH else NORMAL_COLOR
                 label = f"{class_name} {speed:.1f} km/h"
                 if track_id is not None:
                     label = f"ID {track_id} | {label}"
